@@ -1,0 +1,60 @@
+version: "3"
+
+vars:
+  DB_URL: "postgres://armpower:armpower@localhost:5432/armpower?sslmode=disable"
+
+tasks:
+  up:
+    desc: Start all services
+    cmds:
+      - docker compose up -d
+
+  down:
+    desc: Stop all services
+    cmds:
+      - docker compose down
+
+  migrate-up:
+    desc: Run database migrations
+    cmds:
+      - migrate -path migrations -database "{{.DB_URL}}" up
+
+  migrate-down:
+    desc: Rollback last migration
+    cmds:
+      - migrate -path migrations -database "{{.DB_URL}}" down 1
+
+  run:
+    desc: Run the API server
+    env:
+      PORT: "8080"
+      DB_URL: "{{.DB_URL}}"
+      JWT_SECRET: "arm-power-secret-key-change-in-production"
+      MINIO_ENDPOINT: "localhost:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      MINIO_BUCKET: "armpower-media"
+      MINIO_USE_SSL: "false"
+    cmds:
+      - go run ./cmd/server
+
+  build:
+    desc: Build the server binary
+    cmds:
+      - go build -o bin/server ./cmd/server
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./... -v -count=1
+
+  backup:
+    desc: Backup PostgreSQL database (keeps last 14 days)
+    vars:
+      BACKUP_DIR: ./backups
+      BACKUP_FILE: 'armpower_{{now | date "2006-01-02"}}.sql.gz'
+    cmds:
+      - mkdir -p {{.BACKUP_DIR}}
+      - docker compose exec -T postgres pg_dump -U armpower armpower | gzip > {{.BACKUP_DIR}}/{{.BACKUP_FILE}}
+      - find {{.BACKUP_DIR}} -name "armpower_*.sql.gz" -mtime +14 -delete
+      - echo "Backup saved to {{.BACKUP_DIR}}/{{.BACKUP_FILE}}"

@@ -1,0 +1,22 @@
+# Binaries
+bin/
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment & secrets
+.env
+
+# Database backups
+backups/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
