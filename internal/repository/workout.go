@@ -38,7 +38,7 @@ func NewWorkoutRepository(pool *pgxpool.Pool) WorkoutRepository {
 
 func (r *pgWorkoutRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Workout, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, date, weekday, comment, is_deleted, created_at, updated_at
+		`SELECT id, user_id, date, weekday, comment, workout_type, is_deleted, created_at, updated_at
 		 FROM workouts WHERE user_id=$1 AND is_deleted=false ORDER BY date`, userID)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (r *pgWorkoutRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]mod
 	var workouts []model.Workout
 	for rows.Next() {
 		var w model.Workout
-		if err := rows.Scan(&w.ID, &w.UserID, &w.Date, &w.Weekday, &w.Comment, &w.IsDeleted, &w.CreatedAt, &w.UpdatedAt); err != nil {
+		if err := rows.Scan(&w.ID, &w.UserID, &w.Date, &w.Weekday, &w.Comment, &w.WorkoutType, &w.IsDeleted, &w.CreatedAt, &w.UpdatedAt); err != nil {
 			return nil, err
 		}
 		workouts = append(workouts, w)
@@ -71,9 +71,9 @@ func (r *pgWorkoutRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]mod
 func (r *pgWorkoutRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Workout, error) {
 	var w model.Workout
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, date, weekday, comment, is_deleted, created_at, updated_at
+		`SELECT id, user_id, date, weekday, comment, workout_type, is_deleted, created_at, updated_at
 		 FROM workouts WHERE id=$1`, id,
-	).Scan(&w.ID, &w.UserID, &w.Date, &w.Weekday, &w.Comment, &w.IsDeleted, &w.CreatedAt, &w.UpdatedAt)
+	).Scan(&w.ID, &w.UserID, &w.Date, &w.Weekday, &w.Comment, &w.WorkoutType, &w.IsDeleted, &w.CreatedAt, &w.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -91,16 +91,16 @@ func (r *pgWorkoutRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Worko
 
 func (r *pgWorkoutRepo) Create(ctx context.Context, w *model.Workout) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO workouts (id, user_id, date, weekday, comment) VALUES ($1, $2, $3, $4, $5)`,
-		w.ID, w.UserID, w.Date, w.Weekday, w.Comment,
+		`INSERT INTO workouts (id, user_id, date, weekday, comment, workout_type) VALUES ($1, $2, $3, $4, $5, $6)`,
+		w.ID, w.UserID, w.Date, w.Weekday, w.Comment, w.WorkoutType,
 	)
 	return err
 }
 
 func (r *pgWorkoutRepo) Update(ctx context.Context, w *model.Workout) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE workouts SET date=$2, weekday=$3, comment=$4, updated_at=now() WHERE id=$1`,
-		w.ID, w.Date, w.Weekday, w.Comment,
+		`UPDATE workouts SET date=$2, weekday=$3, comment=$4, workout_type=$5, updated_at=now() WHERE id=$1`,
+		w.ID, w.Date, w.Weekday, w.Comment, w.WorkoutType,
 	)
 	return err
 }
@@ -134,17 +134,17 @@ func (r *pgWorkoutRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 
 func (r *pgWorkoutRepo) AddExercise(ctx context.Context, we *model.WorkoutExercise) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO workout_exercises (id, workout_id, exercise_id, name, sort_order, comment)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		we.ID, we.WorkoutID, we.ExerciseID, we.Name, we.SortOrder, we.Comment,
+		`INSERT INTO workout_exercises (id, workout_id, exercise_id, name, sort_order, comment, is_single_hand, weight_unit)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		we.ID, we.WorkoutID, we.ExerciseID, we.Name, we.SortOrder, we.Comment, we.IsSingleHand, we.WeightUnit,
 	)
 	return err
 }
 
 func (r *pgWorkoutRepo) UpdateExercise(ctx context.Context, we *model.WorkoutExercise) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE workout_exercises SET name=$2, sort_order=$3, comment=$4, updated_at=now() WHERE id=$1`,
-		we.ID, we.Name, we.SortOrder, we.Comment,
+		`UPDATE workout_exercises SET name=$2, sort_order=$3, comment=$4, is_single_hand=$5, weight_unit=$6, updated_at=now() WHERE id=$1`,
+		we.ID, we.Name, we.SortOrder, we.Comment, we.IsSingleHand, we.WeightUnit,
 	)
 	return err
 }
@@ -171,17 +171,17 @@ func (r *pgWorkoutRepo) SoftDeleteExercise(ctx context.Context, id uuid.UUID) er
 
 func (r *pgWorkoutRepo) AddSet(ctx context.Context, s *model.WorkoutSet) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO workout_sets (id, workout_exercise_id, set_number, weight, reps, to_failure)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		s.ID, s.WorkoutExerciseID, s.SetNumber, s.Weight, s.Reps, s.ToFailure,
+		`INSERT INTO workout_sets (id, workout_exercise_id, set_number, weight, reps, to_failure, hand)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		s.ID, s.WorkoutExerciseID, s.SetNumber, s.Weight, s.Reps, s.ToFailure, s.Hand,
 	)
 	return err
 }
 
 func (r *pgWorkoutRepo) UpdateSet(ctx context.Context, s *model.WorkoutSet) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE workout_sets SET set_number=$2, weight=$3, reps=$4, to_failure=$5, updated_at=now() WHERE id=$1`,
-		s.ID, s.SetNumber, s.Weight, s.Reps, s.ToFailure,
+		`UPDATE workout_sets SET set_number=$2, weight=$3, reps=$4, to_failure=$5, hand=$6, updated_at=now() WHERE id=$1`,
+		s.ID, s.SetNumber, s.Weight, s.Reps, s.ToFailure, s.Hand,
 	)
 	return err
 }
@@ -202,8 +202,8 @@ func (r *pgWorkoutRepo) CopyWorkout(ctx context.Context, source *model.Workout, 
 
 	// Create new workout
 	_, err = tx.Exec(ctx,
-		`INSERT INTO workouts (id, user_id, date, weekday, comment) VALUES ($1, $2, $3, $4, $5)`,
-		newID, userID, source.Date, source.Weekday, source.Comment,
+		`INSERT INTO workouts (id, user_id, date, weekday, comment, workout_type) VALUES ($1, $2, $3, $4, $5, $6)`,
+		newID, userID, source.Date, source.Weekday, source.Comment, source.WorkoutType,
 	)
 	if err != nil {
 		return nil, err
@@ -213,9 +213,9 @@ func (r *pgWorkoutRepo) CopyWorkout(ctx context.Context, source *model.Workout, 
 	for _, ex := range source.Exercises {
 		newExID := uuid.New()
 		_, err = tx.Exec(ctx,
-			`INSERT INTO workout_exercises (id, workout_id, exercise_id, name, sort_order, comment)
-			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			newExID, newID, ex.ExerciseID, ex.Name, ex.SortOrder, ex.Comment,
+			`INSERT INTO workout_exercises (id, workout_id, exercise_id, name, sort_order, comment, is_single_hand, weight_unit)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			newExID, newID, ex.ExerciseID, ex.Name, ex.SortOrder, ex.Comment, ex.IsSingleHand, ex.WeightUnit,
 		)
 		if err != nil {
 			return nil, err
@@ -223,9 +223,9 @@ func (r *pgWorkoutRepo) CopyWorkout(ctx context.Context, source *model.Workout, 
 
 		for _, s := range ex.Sets {
 			_, err = tx.Exec(ctx,
-				`INSERT INTO workout_sets (id, workout_exercise_id, set_number, weight, reps, to_failure)
-				 VALUES ($1, $2, $3, $4, $5, $6)`,
-				uuid.New(), newExID, s.SetNumber, s.Weight, s.Reps, s.ToFailure,
+				`INSERT INTO workout_sets (id, workout_exercise_id, set_number, weight, reps, to_failure, hand)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				uuid.New(), newExID, s.SetNumber, s.Weight, s.Reps, s.ToFailure, s.Hand,
 			)
 			if err != nil {
 				return nil, err
@@ -244,7 +244,7 @@ func (r *pgWorkoutRepo) CopyWorkout(ctx context.Context, source *model.Workout, 
 
 func (r *pgWorkoutRepo) loadExercises(ctx context.Context, workoutID uuid.UUID) ([]model.WorkoutExercise, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, workout_id, exercise_id, name, sort_order, comment, is_deleted, created_at, updated_at
+		`SELECT id, workout_id, exercise_id, name, sort_order, comment, is_single_hand, weight_unit, is_deleted, created_at, updated_at
 		 FROM workout_exercises WHERE workout_id=$1 AND is_deleted=false ORDER BY sort_order`, workoutID)
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (r *pgWorkoutRepo) loadExercises(ctx context.Context, workoutID uuid.UUID) 
 	var exs []model.WorkoutExercise
 	for rows.Next() {
 		var we model.WorkoutExercise
-		if err := rows.Scan(&we.ID, &we.WorkoutID, &we.ExerciseID, &we.Name, &we.SortOrder, &we.Comment, &we.IsDeleted, &we.CreatedAt, &we.UpdatedAt); err != nil {
+		if err := rows.Scan(&we.ID, &we.WorkoutID, &we.ExerciseID, &we.Name, &we.SortOrder, &we.Comment, &we.IsSingleHand, &we.WeightUnit, &we.IsDeleted, &we.CreatedAt, &we.UpdatedAt); err != nil {
 			return nil, err
 		}
 		exs = append(exs, we)
@@ -275,7 +275,7 @@ func (r *pgWorkoutRepo) loadExercises(ctx context.Context, workoutID uuid.UUID) 
 
 func (r *pgWorkoutRepo) loadSets(ctx context.Context, weID uuid.UUID) ([]model.WorkoutSet, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, workout_exercise_id, set_number, weight, reps, to_failure, is_deleted, created_at, updated_at
+		`SELECT id, workout_exercise_id, set_number, weight, reps, to_failure, hand, is_deleted, created_at, updated_at
 		 FROM workout_sets WHERE workout_exercise_id=$1 AND is_deleted=false ORDER BY set_number`, weID)
 	if err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ func (r *pgWorkoutRepo) loadSets(ctx context.Context, weID uuid.UUID) ([]model.W
 	var sets []model.WorkoutSet
 	for rows.Next() {
 		var s model.WorkoutSet
-		if err := rows.Scan(&s.ID, &s.WorkoutExerciseID, &s.SetNumber, &s.Weight, &s.Reps, &s.ToFailure, &s.IsDeleted, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.WorkoutExerciseID, &s.SetNumber, &s.Weight, &s.Reps, &s.ToFailure, &s.Hand, &s.IsDeleted, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
 		sets = append(sets, s)

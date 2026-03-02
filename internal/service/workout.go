@@ -46,12 +46,17 @@ func (s *WorkoutService) Create(ctx context.Context, userID uuid.UUID, req model
 			id = parsed
 		}
 	}
+	workoutType := req.WorkoutType
+	if workoutType == "" {
+		workoutType = "gym"
+	}
 	w := &model.Workout{
-		ID:      id,
-		UserID:  userID,
-		Date:    date,
-		Weekday: req.Weekday,
-		Comment: req.Comment,
+		ID:          id,
+		UserID:      userID,
+		Date:        date,
+		Weekday:     req.Weekday,
+		Comment:     req.Comment,
+		WorkoutType: workoutType,
 	}
 
 	if err := s.repo.Create(ctx, w); err != nil {
@@ -81,6 +86,9 @@ func (s *WorkoutService) Update(ctx context.Context, id, userID uuid.UUID, req m
 	}
 	if req.Comment != nil {
 		w.Comment = *req.Comment
+	}
+	if req.WorkoutType != nil {
+		w.WorkoutType = *req.WorkoutType
 	}
 
 	if err := s.repo.Update(ctx, w); err != nil {
@@ -118,13 +126,19 @@ func (s *WorkoutService) AddExercise(ctx context.Context, workoutID, userID uuid
 			weID = parsed
 		}
 	}
+	weightUnit := req.WeightUnit
+	if weightUnit == "" {
+		weightUnit = "kg"
+	}
 	we := &model.WorkoutExercise{
-		ID:         weID,
-		WorkoutID:  workoutID,
-		ExerciseID: &exID,
-		Name:       req.Name,
-		SortOrder:  len(w.Exercises),
-		Comment:    req.Comment,
+		ID:           weID,
+		WorkoutID:    workoutID,
+		ExerciseID:   &exID,
+		Name:         req.Name,
+		SortOrder:    len(w.Exercises),
+		Comment:      req.Comment,
+		IsSingleHand: req.IsSingleHand,
+		WeightUnit:   weightUnit,
 	}
 
 	if err := s.repo.AddExercise(ctx, we); err != nil {
@@ -170,6 +184,10 @@ func (s *WorkoutService) AddSet(ctx context.Context, workoutID, weID, userID uui
 			setID = parsed
 		}
 	}
+	hand := req.Hand
+	if hand == "" {
+		hand = "right"
+	}
 	set := &model.WorkoutSet{
 		ID:                setID,
 		WorkoutExerciseID: weID,
@@ -177,6 +195,7 @@ func (s *WorkoutService) AddSet(ctx context.Context, workoutID, weID, userID uui
 		Weight:            req.Weight,
 		Reps:              req.Reps,
 		ToFailure:         req.ToFailure,
+		Hand:              hand,
 	}
 
 	if err := s.repo.AddSet(ctx, set); err != nil {
@@ -217,6 +236,9 @@ func (s *WorkoutService) UpdateSet(ctx context.Context, workoutID, setID, userID
 	if req.ToFailure != nil {
 		existing.ToFailure = *req.ToFailure
 	}
+	if req.Hand != nil {
+		existing.Hand = *req.Hand
+	}
 
 	if err := s.repo.UpdateSet(ctx, existing); err != nil {
 		return nil, err
@@ -250,10 +272,11 @@ func (s *WorkoutService) Copy(ctx context.Context, workoutID, userID uuid.UUID) 
 	weekdays := []string{"Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"}
 
 	copy := &model.Workout{
-		Date:    now,
-		Weekday: weekdays[now.Weekday()],
-		Comment: fmt.Sprintf("[Копия] %s", source.Date.Format("2006-01-02")),
-		Exercises: source.Exercises,
+		Date:        now,
+		Weekday:     weekdays[now.Weekday()],
+		Comment:     fmt.Sprintf("[Копия] %s", source.Date.Format("2006-01-02")),
+		WorkoutType: source.WorkoutType,
+		Exercises:   source.Exercises,
 	}
 
 	return s.repo.CopyWorkout(ctx, copy, uuid.New(), userID)

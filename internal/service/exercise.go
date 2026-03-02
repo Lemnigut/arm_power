@@ -40,6 +40,10 @@ func (s *ExerciseService) Create(ctx context.Context, userID uuid.UUID, req mode
 			id = parsed
 		}
 	}
+	weightUnit := req.WeightUnit
+	if weightUnit == "" {
+		weightUnit = "kg"
+	}
 	ex := &model.Exercise{
 		ID:           id,
 		UserID:       userID,
@@ -48,6 +52,8 @@ func (s *ExerciseService) Create(ctx context.Context, userID uuid.UUID, req mode
 		Category:     req.Category,
 		Description:  req.Description,
 		YoutubeLinks: req.YoutubeLinks,
+		WeightUnit:   weightUnit,
+		IsSingleHand: req.IsSingleHand,
 	}
 	if ex.Muscles == nil {
 		ex.Muscles = []string{}
@@ -84,6 +90,12 @@ func (s *ExerciseService) Update(ctx context.Context, id, userID uuid.UUID, req 
 	}
 	if req.YoutubeLinks != nil {
 		ex.YoutubeLinks = req.YoutubeLinks
+	}
+	if req.WeightUnit != nil {
+		ex.WeightUnit = *req.WeightUnit
+	}
+	if req.IsSingleHand != nil {
+		ex.IsSingleHand = *req.IsSingleHand
 	}
 
 	if err := s.repo.Update(ctx, ex); err != nil {

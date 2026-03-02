@@ -1,0 +1,1 @@
+ALTER TABLE exercises ADD COLUMN weight_unit TEXT NOT NULL DEFAULT 'kg';

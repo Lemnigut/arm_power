@@ -33,7 +33,7 @@ func NewExerciseRepository(pool *pgxpool.Pool) ExerciseRepository {
 
 func (r *pgExerciseRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Exercise, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, user_id, name, muscles, category, description, youtube_links, is_deleted, created_at, updated_at
+		`SELECT id, user_id, name, muscles, category, description, youtube_links, weight_unit, is_single_hand, is_deleted, created_at, updated_at
 		 FROM exercises WHERE user_id = $1 AND is_deleted = false ORDER BY name`, userID)
 	if err != nil {
 		return nil, err
@@ -45,9 +45,9 @@ func (r *pgExerciseRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]mo
 func (r *pgExerciseRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Exercise, error) {
 	var ex model.Exercise
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, name, muscles, category, description, youtube_links, is_deleted, created_at, updated_at
+		`SELECT id, user_id, name, muscles, category, description, youtube_links, weight_unit, is_single_hand, is_deleted, created_at, updated_at
 		 FROM exercises WHERE id = $1`, id,
-	).Scan(&ex.ID, &ex.UserID, &ex.Name, &ex.Muscles, &ex.Category, &ex.Description, &ex.YoutubeLinks, &ex.IsDeleted, &ex.CreatedAt, &ex.UpdatedAt)
+	).Scan(&ex.ID, &ex.UserID, &ex.Name, &ex.Muscles, &ex.Category, &ex.Description, &ex.YoutubeLinks, &ex.WeightUnit, &ex.IsSingleHand, &ex.IsDeleted, &ex.CreatedAt, &ex.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, model.ErrNotFound
 	}
@@ -56,18 +56,18 @@ func (r *pgExerciseRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Exer
 
 func (r *pgExerciseRepo) Create(ctx context.Context, ex *model.Exercise) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO exercises (id, user_id, name, muscles, category, description, youtube_links)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		ex.ID, ex.UserID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks,
+		`INSERT INTO exercises (id, user_id, name, muscles, category, description, youtube_links, weight_unit, is_single_hand)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		ex.ID, ex.UserID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks, ex.WeightUnit, ex.IsSingleHand,
 	)
 	return err
 }
 
 func (r *pgExerciseRepo) Update(ctx context.Context, ex *model.Exercise) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE exercises SET name=$2, muscles=$3, category=$4, description=$5, youtube_links=$6, updated_at=now()
+		`UPDATE exercises SET name=$2, muscles=$3, category=$4, description=$5, youtube_links=$6, weight_unit=$7, is_single_hand=$8, updated_at=now()
 		 WHERE id=$1`,
-		ex.ID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks,
+		ex.ID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks, ex.WeightUnit, ex.IsSingleHand,
 	)
 	return err
 }
@@ -124,7 +124,7 @@ func collectExercises(rows pgx.Rows) ([]model.Exercise, error) {
 	var exercises []model.Exercise
 	for rows.Next() {
 		var ex model.Exercise
-		if err := rows.Scan(&ex.ID, &ex.UserID, &ex.Name, &ex.Muscles, &ex.Category, &ex.Description, &ex.YoutubeLinks, &ex.IsDeleted, &ex.CreatedAt, &ex.UpdatedAt); err != nil {
+		if err := rows.Scan(&ex.ID, &ex.UserID, &ex.Name, &ex.Muscles, &ex.Category, &ex.Description, &ex.YoutubeLinks, &ex.WeightUnit, &ex.IsSingleHand, &ex.IsDeleted, &ex.CreatedAt, &ex.UpdatedAt); err != nil {
 			return nil, err
 		}
 		exercises = append(exercises, ex)
