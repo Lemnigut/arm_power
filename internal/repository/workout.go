@@ -16,15 +16,12 @@ type WorkoutRepository interface {
 	Create(ctx context.Context, w *model.Workout) error
 	Update(ctx context.Context, w *model.Workout) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
-	// Exercises
 	AddExercise(ctx context.Context, we *model.WorkoutExercise) error
 	UpdateExercise(ctx context.Context, we *model.WorkoutExercise) error
 	SoftDeleteExercise(ctx context.Context, id uuid.UUID) error
-	// Sets
 	AddSet(ctx context.Context, s *model.WorkoutSet) error
 	UpdateSet(ctx context.Context, s *model.WorkoutSet) error
 	SoftDeleteSet(ctx context.Context, id uuid.UUID) error
-	// Copy
 	CopyWorkout(ctx context.Context, source *model.Workout, newID uuid.UUID, userID uuid.UUID) (*model.Workout, error)
 }
 

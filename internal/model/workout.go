@@ -66,13 +66,23 @@ type AddWorkoutExerciseRequest struct {
 	ID           string `json:"id"`
 	ExerciseID   string `json:"exerciseId" binding:"required"`
 	Name         string `json:"name" binding:"required"`
+	SortOrder    *int   `json:"sortOrder"`
 	Comment      string `json:"comment"`
 	IsSingleHand bool   `json:"isSingleHand"`
 	WeightUnit   string `json:"weightUnit"`
 }
 
+type UpdateWorkoutExerciseRequest struct {
+	Name         *string `json:"name"`
+	SortOrder    *int    `json:"sortOrder"`
+	Comment      *string `json:"comment"`
+	IsSingleHand *bool   `json:"isSingleHand"`
+	WeightUnit   *string `json:"weightUnit"`
+}
+
 type CreateSetRequest struct {
 	ID        string  `json:"id"`
+	SetNumber *int    `json:"setNumber"`
 	Weight    float64 `json:"weight"`
 	Reps      int     `json:"reps"`
 	ToFailure bool    `json:"toFailure"`
@@ -80,6 +90,7 @@ type CreateSetRequest struct {
 }
 
 type UpdateSetRequest struct {
+	SetNumber *int     `json:"setNumber"`
 	Weight    *float64 `json:"weight"`
 	Reps      *int     `json:"reps"`
 	ToFailure *bool    `json:"toFailure"`

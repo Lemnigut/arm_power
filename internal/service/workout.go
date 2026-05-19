@@ -126,6 +126,10 @@ func (s *WorkoutService) AddExercise(ctx context.Context, workoutID, userID uuid
 			weID = parsed
 		}
 	}
+	sortOrder := len(w.Exercises)
+	if req.SortOrder != nil {
+		sortOrder = *req.SortOrder
+	}
 	weightUnit := req.WeightUnit
 	if weightUnit == "" {
 		weightUnit = "kg"
@@ -135,13 +139,55 @@ func (s *WorkoutService) AddExercise(ctx context.Context, workoutID, userID uuid
 		WorkoutID:    workoutID,
 		ExerciseID:   &exID,
 		Name:         req.Name,
-		SortOrder:    len(w.Exercises),
+		SortOrder:    sortOrder,
 		Comment:      req.Comment,
 		IsSingleHand: req.IsSingleHand,
 		WeightUnit:   weightUnit,
 	}
 
 	if err := s.repo.AddExercise(ctx, we); err != nil {
+		return nil, err
+	}
+	return s.repo.GetByID(ctx, workoutID)
+}
+
+func (s *WorkoutService) UpdateExercise(ctx context.Context, workoutID, weID, userID uuid.UUID, req model.UpdateWorkoutExerciseRequest) (*model.Workout, error) {
+	w, err := s.repo.GetByID(ctx, workoutID)
+	if err != nil {
+		return nil, err
+	}
+	if w.UserID != userID {
+		return nil, model.ErrForbidden
+	}
+
+	var existing *model.WorkoutExercise
+	for _, ex := range w.Exercises {
+		if ex.ID == weID {
+			existing = &ex
+			break
+		}
+	}
+	if existing == nil {
+		return nil, model.ErrNotFound
+	}
+
+	if req.Name != nil {
+		existing.Name = *req.Name
+	}
+	if req.SortOrder != nil {
+		existing.SortOrder = *req.SortOrder
+	}
+	if req.Comment != nil {
+		existing.Comment = *req.Comment
+	}
+	if req.IsSingleHand != nil {
+		existing.IsSingleHand = *req.IsSingleHand
+	}
+	if req.WeightUnit != nil {
+		existing.WeightUnit = *req.WeightUnit
+	}
+
+	if err := s.repo.UpdateExercise(ctx, existing); err != nil {
 		return nil, err
 	}
 	return s.repo.GetByID(ctx, workoutID)
@@ -176,6 +222,9 @@ func (s *WorkoutService) AddSet(ctx context.Context, workoutID, weID, userID uui
 			setNum = len(ex.Sets) + 1
 			break
 		}
+	}
+	if req.SetNumber != nil {
+		setNum = *req.SetNumber
 	}
 
 	setID := uuid.New()
@@ -227,6 +276,9 @@ func (s *WorkoutService) UpdateSet(ctx context.Context, workoutID, setID, userID
 		return nil, model.ErrNotFound
 	}
 
+	if req.SetNumber != nil {
+		existing.SetNumber = *req.SetNumber
+	}
 	if req.Weight != nil {
 		existing.Weight = *req.Weight
 	}

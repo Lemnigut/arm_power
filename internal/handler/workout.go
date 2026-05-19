@@ -125,6 +125,33 @@ func (h *WorkoutHandler) AddExercise(c *gin.Context) {
 	c.JSON(http.StatusCreated, w)
 }
 
+func (h *WorkoutHandler) UpdateExercise(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	workoutID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "invalid workout id"})
+		return
+	}
+	exerciseID, err := uuid.Parse(c.Param("exerciseId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "invalid exercise id"})
+		return
+	}
+
+	var req model.UpdateWorkoutExerciseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse{Error: "invalid request", Message: err.Error()})
+		return
+	}
+
+	w, err := h.svc.UpdateExercise(c.Request.Context(), workoutID, exerciseID, userID, req)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, w)
+}
+
 func (h *WorkoutHandler) RemoveExercise(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	workoutID, err := uuid.Parse(c.Param("id"))

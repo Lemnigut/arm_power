@@ -96,6 +96,7 @@ func main() {
 			workouts.DELETE("/:id", workoutHandler.Delete)
 			workouts.POST("/:id/copy", workoutHandler.Copy)
 			workouts.POST("/:id/exercises", workoutHandler.AddExercise)
+			workouts.PUT("/:id/exercises/:exerciseId", workoutHandler.UpdateExercise)
 			workouts.DELETE("/:id/exercises/:exerciseId", workoutHandler.RemoveExercise)
 			workouts.POST("/:id/exercises/:exerciseId/sets", workoutHandler.AddSet)
 			workouts.PUT("/:id/exercises/:exerciseId/sets/:setId", workoutHandler.UpdateSet)
