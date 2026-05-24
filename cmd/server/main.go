@@ -42,16 +42,19 @@ func main() {
 	userRepo := repository.NewUserRepository(pool)
 	exerciseRepo := repository.NewExerciseRepository(pool)
 	workoutRepo := repository.NewWorkoutRepository(pool)
+	habitRepo := repository.NewHabitRepository(pool)
 
 	// Services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	exerciseService := service.NewExerciseService(exerciseRepo)
 	workoutService := service.NewWorkoutService(workoutRepo)
+	habitService := service.NewHabitService(habitRepo)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	exerciseHandler := handler.NewExerciseHandler(exerciseService)
 	workoutHandler := handler.NewWorkoutHandler(workoutService)
+	habitHandler := handler.NewHabitHandler(habitService)
 
 	// Router
 	gin.SetMode(gin.ReleaseMode)
@@ -101,6 +104,17 @@ func main() {
 			workouts.POST("/:id/exercises/:exerciseId/sets", workoutHandler.AddSet)
 			workouts.PUT("/:id/exercises/:exerciseId/sets/:setId", workoutHandler.UpdateSet)
 			workouts.DELETE("/:id/exercises/:exerciseId/sets/:setId", workoutHandler.DeleteSet)
+		}
+
+		habits := api.Group("/habits")
+		{
+			habits.GET("", habitHandler.List)
+			habits.POST("", habitHandler.Create)
+			habits.GET("/:id", habitHandler.GetByID)
+			habits.PUT("/:id", habitHandler.Update)
+			habits.DELETE("/:id", habitHandler.Delete)
+			habits.POST("/:id/completions", habitHandler.CreateCompletion)
+			habits.DELETE("/:id/completions/:completionId", habitHandler.DeleteCompletion)
 		}
 	}
 
