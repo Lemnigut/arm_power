@@ -18,8 +18,8 @@ func NewHabitService(repo repository.HabitRepository) *HabitService {
 	return &HabitService{repo: repo}
 }
 
-func (s *HabitService) List(ctx context.Context, userID uuid.UUID) ([]model.Habit, error) {
-	return s.repo.ListByUser(ctx, userID)
+func (s *HabitService) List(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]model.Habit, error) {
+	return s.repo.ListByUser(ctx, userID, includeDeleted)
 }
 
 func (s *HabitService) GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Habit, error) {
@@ -59,6 +59,19 @@ func (s *HabitService) Create(ctx context.Context, userID uuid.UUID, req model.C
 		RepeatMode:    repeatMode,
 		RepeatWeekday: repeatWeekday,
 	}
+	if req.IsArchived != nil {
+		h.IsArchived = *req.IsArchived
+	}
+	if req.IsDeleted != nil {
+		h.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		h.CreatedAt = createdAt
+	}
 	if err := s.repo.Create(ctx, h); err != nil {
 		return nil, err
 	}
@@ -79,6 +92,19 @@ func (s *HabitService) Update(ctx context.Context, id, userID uuid.UUID, req mod
 	}
 	if req.Color != nil {
 		h.Color = *req.Color
+	}
+	if req.IsArchived != nil {
+		h.IsArchived = *req.IsArchived
+	}
+	if req.IsDeleted != nil {
+		h.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != nil {
+		createdAt, err := parseClientTime(*req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		h.CreatedAt = createdAt
 	}
 
 	repeatType := h.RepeatType
@@ -141,6 +167,16 @@ func (s *HabitService) CreateCompletion(ctx context.Context, habitID, userID uui
 		ID:      id,
 		HabitID: habitID,
 		Date:    date,
+	}
+	if req.IsDeleted != nil {
+		completion.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		completion.CreatedAt = createdAt
 	}
 	if err := s.repo.CreateCompletion(ctx, completion); err != nil {
 		return nil, err

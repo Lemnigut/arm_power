@@ -40,6 +40,8 @@ type CreateExerciseRequest struct {
 	YoutubeLinks []string `json:"youtubeLinks"`
 	WeightUnit   string   `json:"weightUnit"`
 	IsSingleHand bool     `json:"isSingleHand"`
+	IsDeleted    *bool    `json:"isDeleted"`
+	CreatedAt    string   `json:"createdAt"`
 }
 
 type UpdateExerciseRequest struct {
@@ -50,13 +52,19 @@ type UpdateExerciseRequest struct {
 	YoutubeLinks []string `json:"youtubeLinks"`
 	WeightUnit   *string  `json:"weightUnit"`
 	IsSingleHand *bool    `json:"isSingleHand"`
+	IsDeleted    *bool    `json:"isDeleted"`
+	CreatedAt    *string  `json:"createdAt"`
 }
 
 type CreateCommentRequest struct {
-	ID   string `json:"id"`
-	Text string `json:"text" binding:"required"`
+	ID        string `json:"id"`
+	Text      string `json:"text" binding:"required"`
+	IsDeleted *bool  `json:"isDeleted"`
+	CreatedAt string `json:"createdAt"`
 }
 
 type UpdateCommentRequest struct {
-	Text string `json:"text" binding:"required"`
+	Text      string  `json:"text" binding:"required"`
+	IsDeleted *bool   `json:"isDeleted"`
+	CreatedAt *string `json:"createdAt"`
 }

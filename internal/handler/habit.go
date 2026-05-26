@@ -21,7 +21,8 @@ func NewHabitHandler(svc *service.HabitService) *HabitHandler {
 
 func (h *HabitHandler) List(c *gin.Context) {
 	userID := middleware.GetUserID(c)
-	habits, err := h.svc.List(c.Request.Context(), userID)
+	includeDeleted := c.Query("includeDeleted") == "true"
+	habits, err := h.svc.List(c.Request.Context(), userID, includeDeleted)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to list habits"})
 		return

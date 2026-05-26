@@ -14,6 +14,7 @@ type Habit struct {
 	RepeatType    string            `json:"repeatType"`
 	RepeatMode    string            `json:"repeatMode"`
 	RepeatWeekday *int              `json:"repeatWeekday"`
+	IsArchived    bool              `json:"isArchived"`
 	IsDeleted     bool              `json:"isDeleted"`
 	Completions   []HabitCompletion `json:"completions"`
 	CreatedAt     time.Time         `json:"createdAt"`
@@ -36,6 +37,9 @@ type CreateHabitRequest struct {
 	RepeatType    string `json:"repeatType"`
 	RepeatMode    string `json:"repeatMode"`
 	RepeatWeekday *int   `json:"repeatWeekday"`
+	IsArchived    *bool  `json:"isArchived"`
+	IsDeleted     *bool  `json:"isDeleted"`
+	CreatedAt     string `json:"createdAt"`
 }
 
 type UpdateHabitRequest struct {
@@ -44,9 +48,14 @@ type UpdateHabitRequest struct {
 	RepeatType    *string `json:"repeatType"`
 	RepeatMode    *string `json:"repeatMode"`
 	RepeatWeekday *int    `json:"repeatWeekday"`
+	IsArchived    *bool   `json:"isArchived"`
+	IsDeleted     *bool   `json:"isDeleted"`
+	CreatedAt     *string `json:"createdAt"`
 }
 
 type CreateHabitCompletionRequest struct {
-	ID   string `json:"id"`
-	Date string `json:"date" binding:"required"`
+	ID        string `json:"id"`
+	Date      string `json:"date" binding:"required"`
+	IsDeleted *bool  `json:"isDeleted"`
+	CreatedAt string `json:"createdAt"`
 }

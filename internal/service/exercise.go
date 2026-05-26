@@ -18,8 +18,8 @@ func NewExerciseService(repo repository.ExerciseRepository) *ExerciseService {
 	return &ExerciseService{repo: repo}
 }
 
-func (s *ExerciseService) List(ctx context.Context, userID uuid.UUID) ([]model.Exercise, error) {
-	return s.repo.ListByUser(ctx, userID)
+func (s *ExerciseService) List(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]model.Exercise, error) {
+	return s.repo.ListByUser(ctx, userID, includeDeleted)
 }
 
 func (s *ExerciseService) GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Exercise, error) {
@@ -54,6 +54,16 @@ func (s *ExerciseService) Create(ctx context.Context, userID uuid.UUID, req mode
 		YoutubeLinks: req.YoutubeLinks,
 		WeightUnit:   weightUnit,
 		IsSingleHand: req.IsSingleHand,
+	}
+	if req.IsDeleted != nil {
+		ex.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		ex.CreatedAt = createdAt
 	}
 	if ex.Muscles == nil {
 		ex.Muscles = []string{}
@@ -97,6 +107,16 @@ func (s *ExerciseService) Update(ctx context.Context, id, userID uuid.UUID, req 
 	if req.IsSingleHand != nil {
 		ex.IsSingleHand = *req.IsSingleHand
 	}
+	if req.IsDeleted != nil {
+		ex.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != nil {
+		createdAt, err := parseClientTime(*req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		ex.CreatedAt = createdAt
+	}
 
 	if err := s.repo.Update(ctx, ex); err != nil {
 		return nil, err
@@ -117,7 +137,7 @@ func (s *ExerciseService) Delete(ctx context.Context, id, userID uuid.UUID) erro
 
 // Comments
 
-func (s *ExerciseService) ListComments(ctx context.Context, exerciseID, userID uuid.UUID) ([]model.ExerciseComment, error) {
+func (s *ExerciseService) ListComments(ctx context.Context, exerciseID, userID uuid.UUID, includeDeleted bool) ([]model.ExerciseComment, error) {
 	ex, err := s.repo.GetByID(ctx, exerciseID)
 	if err != nil {
 		return nil, err
@@ -125,7 +145,7 @@ func (s *ExerciseService) ListComments(ctx context.Context, exerciseID, userID u
 	if ex.UserID != userID {
 		return nil, model.ErrForbidden
 	}
-	return s.repo.ListComments(ctx, exerciseID)
+	return s.repo.ListComments(ctx, exerciseID, includeDeleted)
 }
 
 func (s *ExerciseService) CreateComment(ctx context.Context, exerciseID, userID uuid.UUID, req model.CreateCommentRequest) (*model.ExerciseComment, error) {
@@ -149,6 +169,16 @@ func (s *ExerciseService) CreateComment(ctx context.Context, exerciseID, userID 
 		UserID:     userID,
 		Text:       req.Text,
 	}
+	if req.IsDeleted != nil {
+		c.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		c.CreatedAt = createdAt
+	}
 	if err := s.repo.CreateComment(ctx, c); err != nil {
 		return nil, err
 	}
@@ -156,7 +186,17 @@ func (s *ExerciseService) CreateComment(ctx context.Context, exerciseID, userID 
 }
 
 func (s *ExerciseService) UpdateComment(ctx context.Context, commentID, userID uuid.UUID, req model.UpdateCommentRequest) error {
-	c := &model.ExerciseComment{ID: commentID, Text: req.Text}
+	c := &model.ExerciseComment{ID: commentID, UserID: userID, Text: req.Text}
+	if req.IsDeleted != nil {
+		c.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != nil {
+		createdAt, err := parseClientTime(*req.CreatedAt)
+		if err != nil {
+			return model.ErrInvalidInput
+		}
+		c.CreatedAt = createdAt
+	}
 	return s.repo.UpdateComment(ctx, c)
 }
 

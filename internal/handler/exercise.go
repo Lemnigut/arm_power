@@ -22,7 +22,8 @@ func NewExerciseHandler(svc *service.ExerciseService) *ExerciseHandler {
 
 func (h *ExerciseHandler) List(c *gin.Context) {
 	userID := middleware.GetUserID(c)
-	exercises, err := h.svc.List(c.Request.Context(), userID)
+	includeDeleted := c.Query("includeDeleted") == "true"
+	exercises, err := h.svc.List(c.Request.Context(), userID, includeDeleted)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to list exercises"})
 		return
@@ -112,7 +113,8 @@ func (h *ExerciseHandler) ListComments(c *gin.Context) {
 		return
 	}
 
-	comments, err := h.svc.ListComments(c.Request.Context(), exerciseID, userID)
+	includeDeleted := c.Query("includeDeleted") == "true"
+	comments, err := h.svc.ListComments(c.Request.Context(), exerciseID, userID, includeDeleted)
 	if err != nil {
 		handleError(c, err)
 		return

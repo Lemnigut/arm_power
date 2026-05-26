@@ -19,8 +19,8 @@ func NewWorkoutService(repo repository.WorkoutRepository) *WorkoutService {
 	return &WorkoutService{repo: repo}
 }
 
-func (s *WorkoutService) List(ctx context.Context, userID uuid.UUID) ([]model.Workout, error) {
-	return s.repo.ListByUser(ctx, userID)
+func (s *WorkoutService) List(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]model.Workout, error) {
+	return s.repo.ListByUser(ctx, userID, includeDeleted)
 }
 
 func (s *WorkoutService) GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Workout, error) {
@@ -58,6 +58,16 @@ func (s *WorkoutService) Create(ctx context.Context, userID uuid.UUID, req model
 		Comment:     req.Comment,
 		WorkoutType: workoutType,
 	}
+	if req.IsDeleted != nil {
+		w.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		w.CreatedAt = createdAt
+	}
 
 	if err := s.repo.Create(ctx, w); err != nil {
 		return nil, err
@@ -89,6 +99,16 @@ func (s *WorkoutService) Update(ctx context.Context, id, userID uuid.UUID, req m
 	}
 	if req.WorkoutType != nil {
 		w.WorkoutType = *req.WorkoutType
+	}
+	if req.IsDeleted != nil {
+		w.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != nil {
+		createdAt, err := parseClientTime(*req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		w.CreatedAt = createdAt
 	}
 
 	if err := s.repo.Update(ctx, w); err != nil {
@@ -144,6 +164,16 @@ func (s *WorkoutService) AddExercise(ctx context.Context, workoutID, userID uuid
 		IsSingleHand: req.IsSingleHand,
 		WeightUnit:   weightUnit,
 	}
+	if req.IsDeleted != nil {
+		we.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		we.CreatedAt = createdAt
+	}
 
 	if err := s.repo.AddExercise(ctx, we); err != nil {
 		return nil, err
@@ -160,15 +190,12 @@ func (s *WorkoutService) UpdateExercise(ctx context.Context, workoutID, weID, us
 		return nil, model.ErrForbidden
 	}
 
-	var existing *model.WorkoutExercise
-	for _, ex := range w.Exercises {
-		if ex.ID == weID {
-			existing = &ex
-			break
-		}
+	existing, err := s.repo.GetExerciseByID(ctx, weID)
+	if err != nil {
+		return nil, err
 	}
-	if existing == nil {
-		return nil, model.ErrNotFound
+	if existing.WorkoutID != workoutID {
+		return nil, model.ErrForbidden
 	}
 
 	if req.Name != nil {
@@ -185,6 +212,16 @@ func (s *WorkoutService) UpdateExercise(ctx context.Context, workoutID, weID, us
 	}
 	if req.WeightUnit != nil {
 		existing.WeightUnit = *req.WeightUnit
+	}
+	if req.IsDeleted != nil {
+		existing.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != nil {
+		createdAt, err := parseClientTime(*req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		existing.CreatedAt = createdAt
 	}
 
 	if err := s.repo.UpdateExercise(ctx, existing); err != nil {
@@ -246,6 +283,16 @@ func (s *WorkoutService) AddSet(ctx context.Context, workoutID, weID, userID uui
 		ToFailure:         req.ToFailure,
 		Hand:              hand,
 	}
+	if req.IsDeleted != nil {
+		set.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != "" {
+		createdAt, err := parseClientTime(req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		set.CreatedAt = createdAt
+	}
 
 	if err := s.repo.AddSet(ctx, set); err != nil {
 		return nil, err
@@ -262,18 +309,16 @@ func (s *WorkoutService) UpdateSet(ctx context.Context, workoutID, setID, userID
 		return nil, model.ErrForbidden
 	}
 
-	// Find existing set
-	var existing *model.WorkoutSet
-	for _, ex := range w.Exercises {
-		for _, st := range ex.Sets {
-			if st.ID == setID {
-				existing = &st
-				break
-			}
-		}
+	existing, err := s.repo.GetSetByID(ctx, setID)
+	if err != nil {
+		return nil, err
 	}
-	if existing == nil {
-		return nil, model.ErrNotFound
+	parentExercise, err := s.repo.GetExerciseByID(ctx, existing.WorkoutExerciseID)
+	if err != nil {
+		return nil, err
+	}
+	if parentExercise.WorkoutID != workoutID {
+		return nil, model.ErrForbidden
 	}
 
 	if req.SetNumber != nil {
@@ -290,6 +335,16 @@ func (s *WorkoutService) UpdateSet(ctx context.Context, workoutID, setID, userID
 	}
 	if req.Hand != nil {
 		existing.Hand = *req.Hand
+	}
+	if req.IsDeleted != nil {
+		existing.IsDeleted = *req.IsDeleted
+	}
+	if req.CreatedAt != nil {
+		createdAt, err := parseClientTime(*req.CreatedAt)
+		if err != nil {
+			return nil, model.ErrInvalidInput
+		}
+		existing.CreatedAt = createdAt
 	}
 
 	if err := s.repo.UpdateSet(ctx, existing); err != nil {

@@ -21,7 +21,8 @@ func NewWorkoutHandler(svc *service.WorkoutService) *WorkoutHandler {
 
 func (h *WorkoutHandler) List(c *gin.Context) {
 	userID := middleware.GetUserID(c)
-	workouts, err := h.svc.List(c.Request.Context(), userID)
+	includeDeleted := c.Query("includeDeleted") == "true"
+	workouts, err := h.svc.List(c.Request.Context(), userID, includeDeleted)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse{Error: "failed to list workouts"})
 		return

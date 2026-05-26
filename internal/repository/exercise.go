@@ -11,13 +11,13 @@ import (
 )
 
 type ExerciseRepository interface {
-	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Exercise, error)
+	ListByUser(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]model.Exercise, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Exercise, error)
 	Create(ctx context.Context, ex *model.Exercise) error
 	Update(ctx context.Context, ex *model.Exercise) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	// Comments
-	ListComments(ctx context.Context, exerciseID uuid.UUID) ([]model.ExerciseComment, error)
+	ListComments(ctx context.Context, exerciseID uuid.UUID, includeDeleted bool) ([]model.ExerciseComment, error)
 	CreateComment(ctx context.Context, c *model.ExerciseComment) error
 	UpdateComment(ctx context.Context, c *model.ExerciseComment) error
 	SoftDeleteComment(ctx context.Context, id uuid.UUID) error
@@ -31,10 +31,14 @@ func NewExerciseRepository(pool *pgxpool.Pool) ExerciseRepository {
 	return &pgExerciseRepo{pool: pool}
 }
 
-func (r *pgExerciseRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Exercise, error) {
+func (r *pgExerciseRepo) ListByUser(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]model.Exercise, error) {
+	where := `user_id = $1 AND is_deleted = false`
+	if includeDeleted {
+		where = `user_id = $1`
+	}
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, user_id, name, muscles, category, description, youtube_links, weight_unit, is_single_hand, is_deleted, created_at, updated_at
-		 FROM exercises WHERE user_id = $1 AND is_deleted = false ORDER BY name`, userID)
+		 FROM exercises WHERE `+where+` ORDER BY name`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,19 +59,22 @@ func (r *pgExerciseRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Exer
 }
 
 func (r *pgExerciseRepo) Create(ctx context.Context, ex *model.Exercise) error {
+	createdAt := nullableTime(ex.CreatedAt)
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO exercises (id, user_id, name, muscles, category, description, youtube_links, weight_unit, is_single_hand)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		ex.ID, ex.UserID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks, ex.WeightUnit, ex.IsSingleHand,
+		`INSERT INTO exercises (id, user_id, name, muscles, category, description, youtube_links, weight_unit, is_single_hand, is_deleted, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE($11, now()))`,
+		ex.ID, ex.UserID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks, ex.WeightUnit, ex.IsSingleHand, ex.IsDeleted, createdAt,
 	)
 	return err
 }
 
 func (r *pgExerciseRepo) Update(ctx context.Context, ex *model.Exercise) error {
+	createdAt := nullableTime(ex.CreatedAt)
 	_, err := r.pool.Exec(ctx,
-		`UPDATE exercises SET name=$2, muscles=$3, category=$4, description=$5, youtube_links=$6, weight_unit=$7, is_single_hand=$8, updated_at=now()
+		`UPDATE exercises
+		 SET name=$2, muscles=$3, category=$4, description=$5, youtube_links=$6, weight_unit=$7, is_single_hand=$8, is_deleted=$9, created_at=COALESCE($10, created_at), updated_at=now()
 		 WHERE id=$1`,
-		ex.ID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks, ex.WeightUnit, ex.IsSingleHand,
+		ex.ID, ex.Name, ex.Muscles, ex.Category, ex.Description, ex.YoutubeLinks, ex.WeightUnit, ex.IsSingleHand, ex.IsDeleted, createdAt,
 	)
 	return err
 }
@@ -79,10 +86,14 @@ func (r *pgExerciseRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 
 // Comments
 
-func (r *pgExerciseRepo) ListComments(ctx context.Context, exerciseID uuid.UUID) ([]model.ExerciseComment, error) {
+func (r *pgExerciseRepo) ListComments(ctx context.Context, exerciseID uuid.UUID, includeDeleted bool) ([]model.ExerciseComment, error) {
+	where := `exercise_id=$1 AND is_deleted=false`
+	if includeDeleted {
+		where = `exercise_id=$1`
+	}
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, exercise_id, user_id, text, is_deleted, created_at, updated_at
-		 FROM exercise_comments WHERE exercise_id=$1 AND is_deleted=false ORDER BY created_at`, exerciseID)
+		 FROM exercise_comments WHERE `+where+` ORDER BY created_at`, exerciseID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,17 +111,22 @@ func (r *pgExerciseRepo) ListComments(ctx context.Context, exerciseID uuid.UUID)
 }
 
 func (r *pgExerciseRepo) CreateComment(ctx context.Context, c *model.ExerciseComment) error {
+	createdAt := nullableTime(c.CreatedAt)
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO exercise_comments (id, exercise_id, user_id, text) VALUES ($1, $2, $3, $4)`,
-		c.ID, c.ExerciseID, c.UserID, c.Text,
+		`INSERT INTO exercise_comments (id, exercise_id, user_id, text, is_deleted, created_at)
+		 VALUES ($1, $2, $3, $4, $5, COALESCE($6, now()))`,
+		c.ID, c.ExerciseID, c.UserID, c.Text, c.IsDeleted, createdAt,
 	)
 	return err
 }
 
 func (r *pgExerciseRepo) UpdateComment(ctx context.Context, c *model.ExerciseComment) error {
+	createdAt := nullableTime(c.CreatedAt)
 	_, err := r.pool.Exec(ctx,
-		`UPDATE exercise_comments SET text=$2, updated_at=now() WHERE id=$1`,
-		c.ID, c.Text,
+		`UPDATE exercise_comments
+		 SET text=$2, is_deleted=$3, created_at=COALESCE($4, created_at), updated_at=now()
+		 WHERE id=$1`,
+		c.ID, c.Text, c.IsDeleted, createdAt,
 	)
 	return err
 }

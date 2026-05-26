@@ -53,6 +53,8 @@ type CreateWorkoutRequest struct {
 	Weekday     string `json:"weekday"`
 	Comment     string `json:"comment"`
 	WorkoutType string `json:"workoutType"`
+	IsDeleted   *bool  `json:"isDeleted"`
+	CreatedAt   string `json:"createdAt"`
 }
 
 type UpdateWorkoutRequest struct {
@@ -60,6 +62,8 @@ type UpdateWorkoutRequest struct {
 	Weekday     *string `json:"weekday"`
 	Comment     *string `json:"comment"`
 	WorkoutType *string `json:"workoutType"`
+	IsDeleted   *bool   `json:"isDeleted"`
+	CreatedAt   *string `json:"createdAt"`
 }
 
 type AddWorkoutExerciseRequest struct {
@@ -70,6 +74,8 @@ type AddWorkoutExerciseRequest struct {
 	Comment      string `json:"comment"`
 	IsSingleHand bool   `json:"isSingleHand"`
 	WeightUnit   string `json:"weightUnit"`
+	IsDeleted    *bool  `json:"isDeleted"`
+	CreatedAt    string `json:"createdAt"`
 }
 
 type UpdateWorkoutExerciseRequest struct {
@@ -78,6 +84,8 @@ type UpdateWorkoutExerciseRequest struct {
 	Comment      *string `json:"comment"`
 	IsSingleHand *bool   `json:"isSingleHand"`
 	WeightUnit   *string `json:"weightUnit"`
+	IsDeleted    *bool   `json:"isDeleted"`
+	CreatedAt    *string `json:"createdAt"`
 }
 
 type CreateSetRequest struct {
@@ -87,6 +95,8 @@ type CreateSetRequest struct {
 	Reps      int     `json:"reps"`
 	ToFailure bool    `json:"toFailure"`
 	Hand      string  `json:"hand"`
+	IsDeleted *bool   `json:"isDeleted"`
+	CreatedAt string  `json:"createdAt"`
 }
 
 type UpdateSetRequest struct {
@@ -95,4 +105,6 @@ type UpdateSetRequest struct {
 	Reps      *int     `json:"reps"`
 	ToFailure *bool    `json:"toFailure"`
 	Hand      *string  `json:"hand"`
+	IsDeleted *bool    `json:"isDeleted"`
+	CreatedAt *string  `json:"createdAt"`
 }
